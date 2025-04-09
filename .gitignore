@@ -1,0 +1,51 @@
+# ========================
+# Node.js
+# ========================
+node_modules/
+.env
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Coverage
+coverage/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Build outputs
+dist/
+build/
+
+# Vite cache
+.vite/
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Optional: Mac system files
+*.DS_Store
+
+# Optional: local development db files
+*.sqlite
+
+# Optional: Output of `npm pack`
+*.tgz
+
+# Local server uploads or generated media
+public/uploads/
+uploads/
+
+# Optional: testing outputs
+*.local
+jest.config.js
