@@ -65,6 +65,136 @@ module.exports.verifyAdmin = async (req, res, next) => {
     }
 }
 
+module.exports.modifyList = (id, arr) => {
+
+    if (arr.length == 0) {
+        arr.push(id)
+        return arr
+    }
+    let assetExist = arr.find(data => {
+        if (data.toString().toLowerCase() === id.toString().toLowerCase()) {
+            return data
+        }
+    })
+    if (!assetExist) {
+        arr.push(id)
+        return arr
+    }
+
+    //remove id from list
+
+    let newAssetList = arr.filter(data => {
+        if (data.toString().toLowerCase() !== id.toString().toLowerCase()) {
+            return data
+        }
+    })
+    return newAssetList
+
+
+
+}
+
+module.exports.modifyObjectList = (obj, arr, id, quantity) => {
+
+    if (arr.length == 0) {
+        let newObj = {
+            id: id.toLowerCase(),
+            quantity: quantity
+        }
+        arr.push(newObj)
+        return arr
+    }
+
+    //if array is not empty
+    let hasObj
+
+    for (let data of arr) {
+        if (data.id.toLowerCase() === id.toLowerCase()) {
+            hasObj = data
+        }
+    }
+
+
+    if (!hasObj) {
+        console.log('not present')
+        let newObj = {
+            id: id.toLowerCase(),
+            quantity: quantity
+        }
+        arr.push(newObj)
+        return arr
+    }
+
+    //if this point is reached
+
+    arr = arr.map(data => {
+        if (data.id.toLowerCase() == id.toLowerCase()) {
+            data.id = id.toLowerCase()
+            data.quantity = Number(data.quantity) + quantity
+            console.log(data)
+            return data
+        } else {
+            return data
+        }
+    })
+
+    return arr
+
+
+
+}
+//decrement object quantity within a list
+
+module.exports.decrementListQuantity = (obj, arr) => {
+    let newArr = arr.map(data => {
+        if (data.id.toLowerCase() == obj.id.toLowerCase() && obj.quantity <= data.quantity) {
+            data.quantity = data.quantity - Number(obj.quantity)
+            return data
+        }
+        return data
+    })
+    //take away items with quantity zero
+    let refinedArray = newArr.filter(data => data.quantity > 0)
+    return refinedArray
+
+}
+
+
+module.exports.convertUserAsset = (fromObj, toObj, arr) => {
+    //modifying the first object
+    let modify_one = arr.map(data => {
+        if (data.id.toLowerCase() == fromObj.id.toLowerCase()) {
+            data.quantity = Number(data.quantity) - Number(fromObj.quantity)
+            return data
+        }
+        return data
+    })
+
+    //checking if the asset that will recieve increment is present
+    let assetPresent = modify_one.find(data => data.id.toLowerCase() == toObj.id.toLowerCase())
+    if (assetPresent) {
+        //modify the asset
+        let newArr = modify_one.map(data => {
+            if (data.id.toLowerCase() == toObj.id.toLowerCase()) {
+                data.quantity = Number(data.quantity) + Number(toObj.quantity)
+                return data
+            }
+            return data
+        })
+        //refine array befor returning
+        newArr = newArr.filter(data => data.quantity > 0)
+        return newArr
+    }
+    //that means it doesnt exist
+    let newAsset = {
+        id: toObj.id.toLowerCase(),
+        quantity: Number(toObj.quantity)
+    }
+    modify_one.push(newAsset)
+    modify_one = modify_one.filter(data => data.quantity > 0)
+
+    return modify_one
+}
 
 // Create a new Expo client
 const expo = new Expo();

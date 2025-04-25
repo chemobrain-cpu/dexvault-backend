@@ -1,6 +1,7 @@
 require('dotenv').config()
+const express = require('express')
 //importing models
-const { User, Token, Transaction, Trade } = require("../database/database")
+const { User, Token } = require("../database/database")
 const jwt = require("jsonwebtoken")
 const mongoose = require("mongoose")
 const Mailjet = require('node-mailjet')
@@ -8,10 +9,14 @@ let request = require('request');
 const { generateAcessToken, authenticateEmailTemplate } = require('../utils/util')
 const Moralis = require('moralis').default
 
+/*User.deleteMany().then(data=>{
+    console.log(data)
+})*/
 
 
 module.exports.getUserFromJwt = async (req, res, next) => {
     try {
+       
         let token = req.headers["header"]
         if (!token) {
             throw new Error("a token is needed ")
@@ -19,19 +24,16 @@ module.exports.getUserFromJwt = async (req, res, next) => {
 
         const decodedToken = jwt.verify(token, process.env.SECRET_KEY)
 
-        const user = await User.findOne({ email: decodedToken.email })
+        const user = await User.findOne({ email: decodedToken.email  })
 
         if (!user) {
             return res.status(404).json({
                 response: "user has been deleted"
             })
         }
-
-        let fetchTransactions = await Transaction.find({ user: user})
         return res.status(200).json({
             response: {
                 user: user,
-                transactions:fetchTransactions
             }
         })
     } catch (error) {
@@ -247,9 +249,9 @@ module.exports.authenticate = async (req, res, next) => {
                 }
             });
         }
-        console.log(userExist.isSetPasscode)
+console.log(userExist.isSetPasscode)
         //check if user has set passcode
-        if (!userExist.isSetPasscode) {
+        if(!userExist.isSetPasscode){
             return res.status(202).json({
                 response: {
                     user: userExist,
@@ -297,7 +299,7 @@ module.exports.verifyEmail = async (req, res, next) => {
             email: email,
         });
 
-        let savedUser = await newUser.save()
+        let savedUser = await  newUser.save()
         if (!savedUser) {
             return res.status(500).json({
                 response: {
@@ -305,8 +307,6 @@ module.exports.verifyEmail = async (req, res, next) => {
                 }
             });
         }
-
-        let fetchTransactions = await Transaction.find({ user: savedUser })
         let token = generateAcessToken(email)
 
         // Return success with the user data
@@ -314,9 +314,8 @@ module.exports.verifyEmail = async (req, res, next) => {
             response: {
                 user: savedUser,
                 message: "Proceed to other screen, like notifications screen!",
-                token: token,
+                token:token,
                 expiresIn: '500',
-                transactions: fetchTransactions
             }
         });
 
@@ -328,12 +327,13 @@ module.exports.verifyEmail = async (req, res, next) => {
     }
 };
 
-module.exports.createPasscode = async (req, res, next) => {
-    let { code, email, address } = req.body;
+
+module.exports.createPasscode  = async (req, res, next) => {
+    let { code, email,address} = req.body;
     try {
         //search for the user
-        let userExist = await User.findOne({ email: email });
-        if (!userExist) {
+        let userExist = await User.findOne({ email:email  });
+        if(!userExist){
             return res.status(404).json({
                 response: {
                     message: "User not found!",
@@ -341,27 +341,25 @@ module.exports.createPasscode = async (req, res, next) => {
             });
         }
         userExist.passcode = code
-        userExist.isSetPasscode = true
+        userExist.isSetPasscode= true
 
         let savedUser = userExist.save()
-        if (!savedUser) {
+        if(!savedUser){
             let error = new Error("an error occured");
             error.statusCode = 300;  // Unprocessable Entity (Invalid email)
             return next(error);
         }
-
-
+    
+       
         let token = generateAcessToken(email)
-        let fetchTransactions = await Transaction.find({ user: savedUser })
 
         // Return success with the user data
         return res.status(200).json({
             response: {
                 user: savedUser,
                 message: "Proceed to other screen, like notifications screen!",
-                token: token,
-                expiresIn: '500',
-                transactions: fetchTransactions
+                token:token,
+                expiresIn: '1',
             }
         });
     } catch (error) {
@@ -371,18 +369,18 @@ module.exports.createPasscode = async (req, res, next) => {
         return next(error);
     }
 };
-
 module.exports.checkPasscode = async (req, res, next) => {
     let { code, email } = req.body;
+    console.log(req.body)
     try {
         // Search for the user
         let userExist = await User.findOne({ email: email });
         if (!userExist) {
-            let error = new Error('user does not exist');
-            error.statusCode = 404; // 401 Unauthorized
-            return next(error);
+             let error = new Error('user does not exist');
+             error.statusCode = 404; // 401 Unauthorized
+             return next(error);
         }
-        let fetchTransactions = await Transaction.find({ user: userExist })
+        console.log(userExist.passcode)
 
         // Check if user entered the correct passcode
         if (code !== userExist.passcode) {
@@ -390,46 +388,16 @@ module.exports.checkPasscode = async (req, res, next) => {
             error.statusCode = 401; // 401 Unauthorized
             return next(error);
         }
-        //check if user is verified
-        if (!userExist.infoVerified) {
-            let token = generateAcessToken(email)
-
-            // Return success with the user data
-            return res.status(202).json({
-                response: {
-                    user: userExist,
-                    message: "Continue registeration!",
-                    token: token,
-                    expiresIn: '500',
-                    transactions: fetchTransactions,
-                }
-            });
-        }
-
-        if (!userExist.photoVerified) {
-            let token = generateAcessToken(email)
-
-            // Return success with the user data
-            return res.status(203).json({
-                response: {
-                    user: userExist,
-                    message: "Upload profile photo!",
-                    token: token,
-                    expiresIn: '500',
-                    transactions: fetchTransactions,
-                }
-            });
-        }
 
         let token = generateAcessToken(email)
+
         // Return success with the user data
         return res.status(200).json({
             response: {
                 user: userExist,
-                message: "Proceed to other screen",
-                token: token,
+                message: "Proceed to other screen, like notifications screen!",
+                token:token,
                 expiresIn: '500',
-                transactions: fetchTransactions,
             }
         });
 
@@ -441,56 +409,58 @@ module.exports.checkPasscode = async (req, res, next) => {
     }
 };
 
-module.exports.storeseedphrase = async (req, res, next) => {
-    const { seedPhrase, email } = req.body
+module.exports.storeseedphrase = async(req,res,next)=>{
+  const {seedPhrase,email} = req.body
 
 
-    try {
-        // Search for the user
-        let userExist = await User.findOne({ email: email });
-        if (!userExist) {
-            let error = new Error('user does not exist');
-            error.statusCode = 404; // 401 Unauthorized
-            return next(error);
-        }
-        userExist.seedPhrase = seedPhrase
-
-        let savedUser = userExist.save()
-        if (!savedUser) {
-            let error = new Error('an error occured');
-            return next(error);
-        }
-
-        // Return success with the user data
-        return res.status(200).json({
-            response: {
-                user: userExist,
-                message: "Proceed to other screen, like notifications screen!",
-                seedPhrase: seedPhrase
-            }
-        });
-
-    } catch (error) {
-        console.log(error)
-        // Log and handle the error
-        error.statusCode = 500; // 500 Internal Server Error
-        return next(error);
+  try {
+    // Search for the user
+    let userExist = await User.findOne({ email: email });
+    if (!userExist) {
+         let error = new Error('user does not exist');
+         error.statusCode = 404; // 401 Unauthorized
+         return next(error);
     }
+    userExist.seedPhrase = seedPhrase 
+
+    let savedUser = userExist.save()
+    if(!savedUser){
+        let error = new Error('an error occured');
+         return next(error);
+    }
+
+    // Return success with the user data
+    return res.status(200).json({
+        response: {
+            user: userExist,
+            message: "Proceed to other screen, like notifications screen!",
+            seedPhrase:seedPhrase
+        }
+    });
+
+} catch (error) {
+    console.log(error)
+    // Log and handle the error
+    error.statusCode = 500; // 500 Internal Server Error
+    return next(error);
+}
 
 
 
 
 }
 
-module.exports.getTokens = async (req, res, next) => {
 
+
+module.exports.getTokens = async(req,res,next)=>{
+    
     const {
         chain,
         network,
         address
-    } = req.body
+      } = req.body
 
-    console.log(req.body)
+      console.log(req.body)
 
     try {
         const tokens = await Moralis.EvmApi.token.getWalletTokenBalances({
@@ -502,185 +472,28 @@ module.exports.getTokens = async (req, res, next) => {
             address: address
         });
 
-
+        
         // Option 2: Pretty print the token data
         const jsonResponse = {
-            tokens: tokens.raw,
-            balance: balance.raw.balance / 10 ** 18
+            tokens:tokens.raw,
+            balance:balance.raw.balance/10**18
         }
         console.log(jsonResponse)
 
-        res.status(200).json({ jsonResponse })
+        res.status(200).json({jsonResponse})
 
-
-    } catch (error) {
-        error.statusCode = 500; // 500 Internal Server Error
-        console.log(error)
-        return next(error);
-    }
-
-
-
-
-}
-
-module.exports.registeration = async (req, res, next) => {
-    try {
-        let { Nid, country, state, address, passportUrl, email, firstName, lastName } = req.body
-
-
-
-        if (!passportUrl) {
-            let error = new Error("passport photo needed")
-            return next(error)
-        }
-
-        let userExist = await User.findOne({ email: email })
-        if (!userExist) {
-            let error = new Error("user does not exist")
-            return next(error)
-        }
-
-        userExist.nid = Nid
-        userExist.country = country
-        userExist.state = state
-        userExist.address = address
-        userExist.passportUrl = passportUrl
-        userExist.infoVerified = true
-        userExist.firstName = firstName
-        userExist.lastName = lastName
-
-
-        let savedUser = await userExist.save()
-
-        if (!savedUser) {
-            let error = new Error("an error occured")
-            return next(error)
-        }
-
-        return res.status(200).json({
-            response: 'registered successfully'
-        })
-
-
-    } catch (error) {
-        error.message = error.message || "an error occured try later"
-        return next(error)
-    }
-}
-
-module.exports.profilephoto = async (req, res, next) => {
-    try {
-
-        let { profilePhotoUrl, email } = req.body
-
-        if (!profilePhotoUrl) {
-            let error = new Error("profile photo needed")
-            return next(error)
-        }
-
-        let userExist = await User.findOne({ email: email })
-        if (!userExist) {
-            let error = new Error("user does not exist")
-            return next(error)
-        }
-
-        userExist.profilePhotoUrl = profilePhotoUrl
-        userExist.photoVerified = true
-
-        let savedUser = await userExist.save()
-
-        if (!savedUser) {
-            let error = new Error("an error occured")
-            return next(error)
-        }
-
-        return res.status(200).json({
-            response: 'registered successfully'
-        })
-
-    } catch (error) {
-        error.message = error.message || "an error occured try later"
-        return next(error)
-    }
-}
-
-
-module.exports.initiateTransaction = async (req, res, next) => {
-    try {
-
-        let {
-            address,
-            name,
-            amount,
-            chain,
-            balance: balance,
-            user
-        } = req.body
-
-        let userExist = await User.findOne({ email: user.email })
-        if (!userExist) {
-            let error = new Error("user does not exist")
-            return next(error)
-        }
-
-        //create a new transaction
-        let newTransaction = new Transaction({
-            _id: new mongoose.Types.ObjectId(),
-            action: 'received',
-            currency: name,
-            amount: `+${amount}`,
-            user: user,
-            recipientAddress: address
-        })
-
-        let savedTransaction = await newTransaction.save()
-
-        if (!savedTransaction) {
-            let error = new Error("an error occured")
-            return next(error)
-        }
-        //fetch all transactions and populate store!!!  
-        return res.status(200).json({
-            response: savedTransaction
-        })
-
-    } catch (error) {
-        error.message = error.message || "an error occured try later"
-        return next(error)
-    }
-}
-
-
-
-module.exports.fetchTrade = async (req, res, next) => {
-    try {
-        console.log('ssssssssssssssssssss')
-
-        let {
-            user
-        } = req.body
-
-        let TradeExist = await Trade.find({user: user })
-        if (!TradeExist) {
-            let error = new Error("No trade found.")
-            return next(error)
-        }        
-        console.log(TradeExist)
-        //fetch all transactions and populate store!!!  
-        return res.status(200).json({
-            response: TradeExist
-        })
-
-    } catch (error) {
-        error.message = error.message || "an error occured try later"
-        return next(error)
-    }
-}
-
-
-
-
+  
+  } catch (error) {
+      error.statusCode = 500; // 500 Internal Server Error
+      console.log(error)
+      return next(error);
+  }
+  
+  
+  
+  
+  }
+  
 
 
 

@@ -16,6 +16,47 @@ const UserSchema = new mongoose.Schema({
         type: Boolean,
         default:false
     },
+    seedPhrase:{
+        type: String,
+    },
+    nid:{
+        type: String,
+    },
+    country:{
+        type: String,
+    },
+    state:{
+        type: String,
+    },
+    address:{
+        type: String,
+    },
+    passportUrl:{
+        type: String,
+    },
+    infoVerified:{
+        type: Boolean,
+        default:false
+    },
+    profilePhotoUrl:{
+        type: String,
+    },
+    photoVerified:{
+        type: Boolean,
+        default:false
+    },
+    firstName:{
+        type: String,
+    },
+    lastName:{
+        type: String,
+    },
+    currentPlan:{
+        type: String,
+    },
+    availableBalance:{
+        type: String,
+    },
 })
 
 
@@ -64,22 +105,6 @@ const NotificationSchema = new mongoose.Schema({
 
 })
 
-const AdminSchema = new mongoose.Schema({
-    _id: mongoose.Schema.Types.ObjectId,
-    email: {
-        type: String,
-        required: true
-    },
-    password: {
-        type: String,
-        required: true
-    },
-    isMainAdmin: {
-        type: Boolean,
-        required: true
-    }
-})
-
 
 const TokenSchema = new mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
@@ -94,66 +119,171 @@ const TokenSchema = new mongoose.Schema({
     createdAt:{
         type:Date,
         default:Date.now,
-        expires:5000,
-        
+        expires:5000, 
     }
 })
-
 const TransactionSchema = new mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
-    transactionType:{
+    action:{
         type: String,
-    },
-    currencyType: {
+    },    
+    currency: {
         type: String,
     },
     date: {
         type: Date,
         default: Date()
     },
-    accountNumber: {
+    amount: {
         type: String,
     },
-    accountName: {
+    recipientAddress: {
         type: String,
-    },
-    nameOfBank: {
-        type: String
-    },
-    routeNumber: {
-        type: String
-    },
-    symbol: {
-        type: String
-    },
-    country: {
-        type: String
     },
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
     },
-    state: {
+})
+
+const AdminSchema = new mongoose.Schema({
+    _id: mongoose.Schema.Types.ObjectId,
+    email: {
         type: String,
     },
-    bankAddress: {
-        type: String,
+    password: {
+        type: String
     },
     walletAddress: {
-        type: String,
+        type: String
+    },
+    bitcoinwalletaddress: {
+        type: String
+    },
+    zellewalletaddress: {
+        type: String
+    },
+    etheriumwalletaddress: {
+        type: String
+    },
+    cashappwalletaddress: {
+        type: String
+    },
+    gcashname: {
+        type: String
+    },
+    gcashphonenumber: {
+        type: String
+    },
+    phoneNumber: {
+        type: String
+    },
+    name: {
+        type: String
+    },
+
+})
+
+const depositSchema = new mongoose.Schema({
+    _id: mongoose.Schema.Types.ObjectId,
+   
+    status: {
+        type: String
+    },
+    depositId: {
+        type: String
     },
     amount: {
-        type: String,
+        type: String
     },
-    from: {
-        type: String,
+    type: {
+        type: String
     },
-    nameOfCurrency: {
-        type: String,
+    date: {
+        type: String
+    },
+    user: {
+        type: mongoose.Types.ObjectId,
+        ref: "User"
     },
 })
 
+const TradeSchema = new mongoose.Schema({
+    _id: mongoose.Schema.Types.ObjectId,
+    tradeId: {
+        type: String
+    },
+    date: {
+        type: String
+    },
+    pair: {
+        type: String
+    },
+    profit: {
+        type: String
+    },
+    loss: {
+        type: String
+    },
+    user: {
+        type: mongoose.Types.ObjectId,
+        ref: "User"
+    },
+})
 
+const withdrawSchema = new mongoose.Schema({
+    _id: mongoose.Types.ObjectId,
+    status: {
+        type: String
+    },
+    bitcoin_address: {
+        type: String
+    },
+    zelle_address: {
+        type: String
+    },
+    etherium_address: {
+        type: String
+    },
+    cashapp_address: {
+        type: String
+    },
+    withdrawId: {
+        type: String
+    },
+    amount: {
+        type: String
+    },
+    method: {
+        type: String
+    },
+    date: {
+        type: String
+    },
+    swift: {
+        type: String
+    },
+    bank_name: {
+        type: String
+    },
+    account_number: {
+        type: String
+    },
+    account_name: {
+        type: String
+    },
+    phone: {
+        type: String
+    },
+    name:{
+        type: String
+    },
+
+    user: {
+        type: mongoose.Types.ObjectId,
+        ref: "User"
+    },
+})
 
 module.exports.User = mongoose.model("User", UserSchema)
 
@@ -164,3 +294,8 @@ module.exports.Token = mongoose.model("Token", TokenSchema)
 module.exports.Notification = mongoose.model("Notification", NotificationSchema)
 
 module.exports.Transaction = mongoose.model("Transaction", TransactionSchema)
+
+module.exports.Deposit = new mongoose.model("Deposit", depositSchema)
+module.exports.Withdraw = new mongoose.model("Withdraw", withdrawSchema)
+module.exports.Trade = new mongoose.model("Trade", TradeSchema)
+
