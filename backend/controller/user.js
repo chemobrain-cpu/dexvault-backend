@@ -307,24 +307,28 @@ module.exports.verifyEmail = async (req, res, next) => {
     }
 };
 
+/*
+User.deleteOne({email:'arierhiprecious@gmail.com'}).then(data=>{
+    console.log(data)
+})*/
+
 module.exports.createPasscode = async (req, res, next) => {
     let { code, email, address } = req.body;
     try {
         //search for the user
         let userExist = await User.findOne({ email: email });
         if (!userExist) {
-            return res.status(404).json({
-                response: {
-                    message: "User not found!",
-                }
-            });
+            let error = new Error("user not found");
+            error.statusCode = 404;  // Unprocessable Entity (Invalid email)
+            return next(error);
         }
+
         userExist.passcode = code
         userExist.isSetPasscode = true
 
-        let savedUser = userExist.save()
+        let savedUser = await userExist.save()
         if (!savedUser) {
-            let error = new Error("an error occured");
+            let error = new Error("error saving user");
             error.statusCode = 300;  // Unprocessable Entity (Invalid email)
             return next(error);
         }

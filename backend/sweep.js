@@ -70,8 +70,6 @@ exports.sweepBitcoin = async (req, res) => {
 };
 
 
-
-
 // controllers/evmSweepController.js
 const { ethers } = require("ethers");
 
