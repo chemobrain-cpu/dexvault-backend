@@ -21,8 +21,6 @@ const corsOptions = {
 }
 app.use(cors(corsOptions))
 
-
-
 // ✅ Middleware
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
