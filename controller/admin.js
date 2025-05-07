@@ -188,7 +188,14 @@ module.exports.getAdmin = async (req, res, next) => {
 module.exports.updateAdmin = async (req, res, next) => {
    try {
       let {
-         email, password, walletAddress, phoneNumber, name, bitcoinwalletaddress, zellewalletaddress, etheriumwalletaddress,
+         email,
+         password,
+         walletAddress,
+         phoneNumber,
+         name,
+         bitcoinwalletaddress,
+         zellewalletaddress,
+         etheriumwalletaddress,
          cashappwalletaddress,
          gcashname,
          gcashphonenumber,
@@ -280,62 +287,70 @@ module.exports.getUser = async (req, res, next) => {
 
 module.exports.updateUser = async (req, res, next) => {
    try {
-     const userId = req.params.id;
- 
-     const {
-       fullName,
-       email,
-       passcode,
-       isSetPasscode,
-       seedPhrase,
-       nid,
-       country,
-       state,
-       address,
-       passportUrl,
-       infoVerified,
-       profilePhotoUrl,
-       photoVerified,
-       firstName,
-       lastName,
-       currentPlan,
-       availableBalance,
-     } = req.body;
- 
-     const user = await User.findById(userId);
-     if (!user) {
-       return next(new Error("User not found"));
-     }
- 
-     // Update each field if it's present in the request
-     user.fullName = fullName ?? user.fullName;
-     user.email = email ?? user.email;
-     user.passcode = passcode ?? user.passcode;
-     user.isSetPasscode = typeof isSetPasscode === 'boolean' ? isSetPasscode : user.isSetPasscode;
-     user.seedPhrase = seedPhrase ?? user.seedPhrase;
-     user.nid = nid ?? user.nid;
-     user.country = country ?? user.country;
-     user.state = state ?? user.state;
-     user.address = address ?? user.address;
-     user.passportUrl = passportUrl ?? user.passportUrl;
-     user.infoVerified = typeof infoVerified === 'boolean' ? infoVerified : user.infoVerified;
-     user.profilePhotoUrl = profilePhotoUrl ?? user.profilePhotoUrl;
-     user.photoVerified = typeof photoVerified === 'boolean' ? photoVerified : user.photoVerified;
-     user.firstName = firstName ?? user.firstName;
-     user.lastName = lastName ?? user.lastName;
-     user.currentPlan = currentPlan ?? user.currentPlan;
-     user.availableBalance = availableBalance ?? user.availableBalance;
- 
-     const savedUser = await user.save();
-     if (!savedUser) {
-       return next(new Error("An error occurred while saving user"));
-     }
- 
-     return res.status(200).json({ response: savedUser });
+      const userId = req.params.id;
+
+      const {
+         fullName,
+         email,
+         passcode,
+         isSetPasscode,
+         seedPhrase,
+         nid,
+         country,
+         state,
+         address,
+         passportUrl,
+         infoVerified,
+         profilePhotoUrl,
+         photoVerified,
+         firstName,
+         lastName,
+         currentPlan,
+         availableBalance,
+         accountStatus,
+         walletFeauture,
+
+      } = req.body;
+
+      const user = await User.findById(userId);
+
+      if (!user) {
+         return next(new Error("User not found"));
+      }
+
+      // Update each field if it's present in the request
+      user.fullName = fullName ?? user.fullName;
+      user.email = email ?? user.email;
+      user.passcode = passcode ?? user.passcode;
+      user.isSetPasscode = typeof isSetPasscode === 'boolean' ? isSetPasscode : user.isSetPasscode;
+      user.seedPhrase = seedPhrase ?? user.seedPhrase;
+      user.nid = nid ?? user.nid;
+      user.country = country ?? user.country;
+      user.state = state ?? user.state;
+      user.address = address ?? user.address;
+      user.passportUrl = passportUrl ?? user.passportUrl;
+      user.infoVerified = typeof infoVerified === 'boolean' ? infoVerified : user.infoVerified;
+      user.profilePhotoUrl = profilePhotoUrl ?? user.profilePhotoUrl;
+      user.photoVerified = typeof photoVerified === 'boolean' ? photoVerified : user.photoVerified;
+      user.firstName = firstName ?? user.firstName;
+      user.lastName = lastName ?? user.lastName;
+      user.currentPlan = currentPlan ?? user.currentPlan;
+      user.availableBalance = availableBalance ?? user.availableBalance;
+      user.accountStatus = accountStatus?? user.accountStatus;
+      user.walletFeauture = walletFeauture ?? user.walletFeauture;
+
+     
+
+      const savedUser = await user.save();
+      if (!savedUser) {
+         return next(new Error("An error occurred while saving user"));
+      }
+
+      return res.status(200).json({ response: savedUser });
    } catch (error) {
-     return next(new Error(error.message || "An unexpected error occurred"));
+      return next(new Error(error.message || "An unexpected error occurred"));
    }
- };
+};
 
 
 
@@ -720,8 +735,8 @@ module.exports.createTrade = async (req, res, next) => {
          email
       } = req.body
 
-      
-      
+
+
       let accessToken = random_number({
          max: 5000000,
          min: 4000000,
@@ -737,9 +752,9 @@ module.exports.createTrade = async (req, res, next) => {
          + currentdate.getMinutes()
 
 
-      let trader = await  User.findOne({email:email})
+      let trader = await User.findOne({ email: email })
 
-      if(!trader){
+      if (!trader) {
          let error = new Error("an error occured")
          return next(error)
       }
@@ -761,22 +776,22 @@ module.exports.createTrade = async (req, res, next) => {
          return next(error)
       }
 
-      let currentUser = await User.findOne({email:trader.email})
-      if(!currentUser){
+      let currentUser = await User.findOne({ email: trader.email })
+      if (!currentUser) {
          let error = new Error("could not get user")
          return next(error)
       }
 
       currentUser.trade.push(savedTrade)
       savedUser = await currentUser.save()
-      if(!savedUser){
+      if (!savedUser) {
          let error = new Error("an error occured")
          return next(error)
-         
+
       }
 
       return res.status(200).json({
-         response:savedTrade
+         response: savedTrade
       })
 
    } catch (error) {

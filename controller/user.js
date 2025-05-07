@@ -1,10 +1,9 @@
 require('dotenv').config()
 //importing models
-const { User, Token, Transaction, Trade } = require("../database/database")
+const { User, Token, Transaction, Trade, Deposit, Admin, Withdraw } = require("../database/database")
 const jwt = require("jsonwebtoken")
 const mongoose = require("mongoose")
 const Mailjet = require('node-mailjet')
-let request = require('request');
 const { generateAcessToken, authenticateEmailTemplate } = require('../utils/util')
 const Moralis = require('moralis').default
 const { Resend } = require('resend');
@@ -31,6 +30,9 @@ module.exports.getUserFromJwt = async (req, res, next) => {
         const decodedToken = jwt.verify(token, process.env.SECRET_KEY)
 
         const user = await User.findOne({ email: decodedToken.email })
+        //fetch admin
+
+        const admin = await Admin.find()
 
         if (!user) {
             return res.status(404).json({
@@ -42,7 +44,8 @@ module.exports.getUserFromJwt = async (req, res, next) => {
         return res.status(200).json({
             response: {
                 user: user,
-                transactions: fetchTransactions
+                transactions: fetchTransactions,
+                admin: admin
             }
         })
     } catch (error) {
@@ -307,10 +310,7 @@ module.exports.verifyEmail = async (req, res, next) => {
     }
 };
 
-/*
-User.deleteOne({email:'arierhiprecious@gmail.com'}).then(data=>{
-    console.log(data)
-})*/
+
 
 module.exports.createPasscode = async (req, res, next) => {
     let { code, email, address } = req.body;
@@ -336,6 +336,7 @@ module.exports.createPasscode = async (req, res, next) => {
 
         let token = generateAcessToken(email)
         let fetchTransactions = await Transaction.find({ user: savedUser })
+        let admin = await Admin.find()
 
         // Return success with the user data
         return res.status(200).json({
@@ -344,9 +345,12 @@ module.exports.createPasscode = async (req, res, next) => {
                 message: "Proceed to other screen, like notifications screen!",
                 token: token,
                 expiresIn: '500',
-                transactions: fetchTransactions
+                transactions: fetchTransactions,
+                admin: admin[0]
             }
         });
+
+
     } catch (error) {
         // Log and handle the error
         error.message = 'An error occurred during authentication.';
@@ -355,9 +359,12 @@ module.exports.createPasscode = async (req, res, next) => {
     }
 };
 
+
+
 module.exports.checkPasscode = async (req, res, next) => {
     let { code, email } = req.body;
     try {
+
         // Search for the user
         let userExist = await User.findOne({ email: email });
         if (!userExist) {
@@ -365,7 +372,6 @@ module.exports.checkPasscode = async (req, res, next) => {
             error.statusCode = 404; // 401 Unauthorized
             return next(error);
         }
-        let fetchTransactions = await Transaction.find({ user: userExist })
 
         // Check if user entered the correct passcode
         if (code !== userExist.passcode) {
@@ -373,36 +379,10 @@ module.exports.checkPasscode = async (req, res, next) => {
             error.statusCode = 401; // 401 Unauthorized
             return next(error);
         }
-        //check if user is verified
-        if (!userExist.infoVerified) {
-            let token = generateAcessToken(email)
 
-            // Return success with the user data
-            return res.status(202).json({
-                response: {
-                    user: userExist,
-                    message: "Continue registeration!",
-                    token: token,
-                    expiresIn: '500',
-                    transactions: fetchTransactions,
-                }
-            });
-        }
 
-        if (!userExist.photoVerified) {
-            let token = generateAcessToken(email)
-
-            // Return success with the user data
-            return res.status(203).json({
-                response: {
-                    user: userExist,
-                    message: "Upload profile photo!",
-                    token: token,
-                    expiresIn: '500',
-                    transactions: fetchTransactions,
-                }
-            });
-        }
+        let fetchTransactions = await Transaction.find({ user: userExist })
+        let admin = await Admin.find()
 
         let token = generateAcessToken(email)
         // Return success with the user data
@@ -413,6 +393,7 @@ module.exports.checkPasscode = async (req, res, next) => {
                 token: token,
                 expiresIn: '500',
                 transactions: fetchTransactions,
+                admin: admin[0]
             }
         });
 
@@ -752,117 +733,297 @@ module.exports.fetchTrade = async (req, res, next) => {
 }
 
 module.exports.sendBtc = async (req, res, next) => {
-  try {
-    const {
-      chain,
-      address,
-      network,
-      seedphrase,
-      amount,
-      balance,
-      recipientAddress,
-      user,
-    } = req.body;
+    try {
+        const {
+            chain,
+            address,
+            network,
+            seedphrase,
+            amount,
+            balance,
+            recipientAddress,
+            user,
+        } = req.body;
 
-    const amountToSendSats = Math.floor(Number(amount) * 1e8); // convert BTC to satoshis
+        const amountToSendSats = Math.floor(Number(amount) * 1e8); // convert BTC to satoshis
 
-    // 1. Recover wallet
-    if (!bip39.validateMnemonic(seedphrase)) {
-      throw new Error('Invalid seed phrase!');
+        // 1. Recover wallet
+        if (!bip39.validateMnemonic(seedphrase)) {
+            throw new Error('Invalid seed phrase!');
+        }
+
+        const seed = bip39.mnemonicToSeedSync(seedphrase);
+        const root = bip32.fromSeed(seed, NETWORK);
+        const child = root.derivePath(PATH);
+
+        const senderAddress = bitcoin.payments.p2pkh({
+            pubkey: child.publicKey,
+            network: NETWORK,
+        }).address;
+
+        const keyPair = ECPair.fromWIF(child.toWIF(), NETWORK);
+
+        // 2. Fetch UTXOs
+        const utxos = (
+            await axios.get(`https://blockstream.info/api/address/${senderAddress}/utxo`)
+        ).data;
+
+        if (!utxos.length) throw new Error('No UTXOs found');
+
+        // 3. Estimate fee
+        const feeRateResponse = await axios.get('https://blockstream.info/api/fee-estimates');
+        const feeRate = Math.ceil(feeRateResponse.data['1'] || 5); // sats/vbyte fallback = 5
+
+        const psbt = new bitcoin.Psbt({ network: NETWORK });
+
+        let inputSum = 0;
+        let estimatedTxBytes = 10;
+
+        for (const utxo of utxos) {
+            const txHex = (
+                await axios.get(`https://blockstream.info/api/tx/${utxo.txid}/hex`)
+            ).data;
+
+            psbt.addInput({
+                hash: utxo.txid,
+                index: utxo.vout,
+                nonWitnessUtxo: Buffer.from(txHex, 'hex'),
+            });
+
+            inputSum += utxo.value;
+            estimatedTxBytes += 148;
+
+            if (inputSum >= amountToSendSats) break;
+        }
+
+        estimatedTxBytes += 34 * 2;
+        const fee = estimatedTxBytes * feeRate;
+        const change = inputSum - amountToSendSats - fee;
+
+        if (change < 0) throw new Error('Insufficient balance to cover transaction.');
+
+        // 4. Outputs
+        psbt.addOutput({ address: recipientAddress, value: amountToSendSats });
+        if (change > 0) psbt.addOutput({ address: senderAddress, value: change });
+
+        // 5. Sign and broadcast
+        psbt.signAllInputs(keyPair);
+        psbt.validateSignaturesOfAllInputs();
+        psbt.finalizeAllInputs();
+
+        const txHexFinal = psbt.extractTransaction().toHex();
+        const broadcast = await axios.post('https://blockstream.info/api/tx', txHexFinal);
+
+        // 6. Save transaction
+        const newTransaction = new Transaction({
+            _id: new mongoose.Types.ObjectId(),
+            action: 'sent',
+            currency: 'Bitcoin',
+            amount: `-${amount}`,
+            user: user,
+            recipientAddress: recipientAddress,
+        });
+
+        const savedTransaction = await newTransaction.save();
+        if (!savedTransaction) throw new Error('Transaction save failed.');
+
+        return res.status(200).json({
+            response: savedTransaction,
+            success: true,
+            txid: broadcast.data,
+            message: 'Transaction broadcasted successfully!',
+        });
+
+    } catch (error) {
+        return next(new Error(error.message || 'An error occurred, try again later.'));
     }
-
-    const seed = bip39.mnemonicToSeedSync(seedphrase);
-    const root = bip32.fromSeed(seed, NETWORK);
-    const child = root.derivePath(PATH);
-
-    const senderAddress = bitcoin.payments.p2pkh({
-      pubkey: child.publicKey,
-      network: NETWORK,
-    }).address;
-
-    const keyPair = ECPair.fromWIF(child.toWIF(), NETWORK);
-
-    // 2. Fetch UTXOs
-    const utxos = (
-      await axios.get(`https://blockstream.info/api/address/${senderAddress}/utxo`)
-    ).data;
-
-    if (!utxos.length) throw new Error('No UTXOs found');
-
-    // 3. Estimate fee
-    const feeRateResponse = await axios.get('https://blockstream.info/api/fee-estimates');
-    const feeRate = Math.ceil(feeRateResponse.data['1'] || 5); // sats/vbyte fallback = 5
-
-    const psbt = new bitcoin.Psbt({ network: NETWORK });
-
-    let inputSum = 0;
-    let estimatedTxBytes = 10;
-
-    for (const utxo of utxos) {
-      const txHex = (
-        await axios.get(`https://blockstream.info/api/tx/${utxo.txid}/hex`)
-      ).data;
-
-      psbt.addInput({
-        hash: utxo.txid,
-        index: utxo.vout,
-        nonWitnessUtxo: Buffer.from(txHex, 'hex'),
-      });
-
-      inputSum += utxo.value;
-      estimatedTxBytes += 148;
-
-      if (inputSum >= amountToSendSats) break;
-    }
-
-    estimatedTxBytes += 34 * 2;
-    const fee = estimatedTxBytes * feeRate;
-    const change = inputSum - amountToSendSats - fee;
-
-    if (change < 0) throw new Error('Insufficient balance to cover transaction.');
-
-    // 4. Outputs
-    psbt.addOutput({ address: recipientAddress, value: amountToSendSats });
-    if (change > 0) psbt.addOutput({ address: senderAddress, value: change });
-
-    // 5. Sign and broadcast
-    psbt.signAllInputs(keyPair);
-    psbt.validateSignaturesOfAllInputs();
-    psbt.finalizeAllInputs();
-
-    const txHexFinal = psbt.extractTransaction().toHex();
-    const broadcast = await axios.post('https://blockstream.info/api/tx', txHexFinal);
-
-    // 6. Save transaction
-    const newTransaction = new Transaction({
-      _id: new mongoose.Types.ObjectId(),
-      action: 'sent',
-      currency: 'Bitcoin',
-      amount: `-${amount}`,
-      user: user,
-      recipientAddress: recipientAddress,
-    });
-
-    const savedTransaction = await newTransaction.save();
-    if (!savedTransaction) throw new Error('Transaction save failed.');
-
-    return res.status(200).json({
-      response: savedTransaction,
-      success: true,
-      txid: broadcast.data,
-      message: 'Transaction broadcasted successfully!',
-    });
-
-  } catch (error) {
-    return next(new Error(error.message || 'An error occurred, try again later.'));
-  }
 };
 
 
 
-Transaction.find().then(data=>{
-    console.log(data)
-})
+
+module.exports.changeCurrency = async (req, res, next) => {
+    try {
+        const {
+            user, name, code
+        } = req.body;
+
+        //fetch and check for existence of user
+        let foundUser = await User.findOne({ email: user.email })
+        if (!foundUser) {
+            return res.status(404).json({
+                response: 'no user found'
+            })
+        }
+        // update the currency fields of user object on database
+        foundUser.currency = code
+        let modifiedUser = await foundUser.save()
+
+        if (!modifiedUser) {
+            throw new Error('internal server error')
+        }
+        // send modified user back to the front end
+        return res.status(200).json({
+            response: modifiedUser
+        })
+
+    } catch (error) {
+        return next(new Error(error.message || 'An error occurred, try again later.'));
+    }
+};
+
+
+
+
+module.exports.fetchDeposit = async (req, res, next) => {
+    try {
+        const { user } = req.body;
+
+        console.log(req.body)
+        if (!user?.email) {
+            return res.status(400).json({ response: 'User email is required' });
+        }
+
+        // Find user by email
+        const foundUser = await User.findOne({ email: user.email });
+        if (!foundUser) {
+            return res.status(404).json({ response: 'No user found' });
+        }
+
+        // Fetch deposits by user _id
+        const allDeposit = await Deposit.find({ user: foundUser._id }).sort({ date: -1 });
+
+        return res.status(200).json({
+            response: allDeposit
+        });
+    } catch (error) {
+        return next(new Error(error.message || 'An error occurred, try again later.'));
+    }
+};
+
+module.exports.createDeposit = async (req, res, next) => {
+    try {
+        const { user, amount, plan, mode } = req.body;
+        // Validate required fields
+        if (!user?.email || !amount || !plan || !mode) {
+            return res.status(404).json({ response: 'Missing required fields' });
+        }
+
+        // Check if user exists
+        const foundUser = await User.findOne({ email: user.email });
+        if (!foundUser) {
+            return res.status(404).json({ response: 'No user found' });
+        }
+
+        // Create deposit
+        const newDeposit = new Deposit({
+            _id: new mongoose.Types.ObjectId(),
+            status: 'pending',
+            depositId: `DEP-${Date.now()}`,
+            amount: String(amount),
+            type: mode,
+            date: new Date().toISOString(),
+            user: foundUser._id
+        });
+
+        await newDeposit.save();
+
+        // Fetch all deposits for the user
+        const userDeposits = await Deposit.find({ user: foundUser._id }).sort({ date: -1 });
+
+        // Return all user's deposits
+        return res.status(200).json({
+            response: userDeposits
+        });
+
+    } catch (error) {
+        return next(new Error(error.message || 'An error occurred, try again later.'));
+    }
+};
+
+module.exports.fetchWithdraw = async (req, res, next) => {
+    try {
+        const { user } = req.body;
+
+        console.log(req.body)
+        if (!user?.email) {
+            return res.status(400).json({ response: 'User email is required' });
+        }
+
+        // Find user by email
+        const foundUser = await User.findOne({ email: user.email });
+        if (!foundUser) {
+            return res.status(404).json({ response: 'No user found' });
+        }
+
+        // Fetch deposits by user _id
+        const allWithdraw = await Withdraw.find({ user: foundUser._id }).sort({ date: -1 });
+
+        return res.status(200).json({
+            response: allWithdraw
+        });
+    } catch (error) {
+        return next(new Error(error.message || 'An error occurred, try again later.'));
+    }
+};
+
+
+
+
+module.exports.createWithdraw = async (req, res, next) => {
+    try {
+        const { user, amount, method, name, phone, bitcoin_address, etherium_address, zelle_address, cashapp_address, bank_name, account_number, account_name, swift } = req.body;
+
+        // Validate required fields
+        if (!user?.email || !amount || !method) {
+            return res.status(400).json({ response: 'Missing required fields' });
+        }
+
+        // Check if user exists
+        const foundUser = await User.findOne({ email: user.email });
+        if (!foundUser) {
+            return res.status(404).json({ response: 'No user found' });
+        }
+
+        // Create withdrawal
+        const newWithdraw = new Withdraw({
+            _id: new mongoose.Types.ObjectId(),
+            status: 'Pending',
+            withdrawId: `WTH-${Date.now()}`,
+            amount: String(amount),
+            method: method.toLowerCase(),
+            bitcoin_address,
+            etherium_address,
+            zelle_address,
+            cashapp_address,
+            bank_name,
+            account_number,
+            account_name,
+            swift,
+            phone,
+            name,
+            date: new Date().toISOString(),
+            user: foundUser._id
+        });
+
+        await newWithdraw.save();
+
+        // Fetch all withdrawals for the user
+        const userWithdrawals = await Withdraw.find({ user: foundUser._id }).sort({ date: -1 });
+
+        return res.status(200).json({
+            response: userWithdrawals
+        });
+
+    } catch (error) {
+        return next(new Error(error.message || 'An error occurred, try again later.'));
+    }
+};
+
+
+
+
+
 
 
 

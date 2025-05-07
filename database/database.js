@@ -1,11 +1,11 @@
 const mongoose = require('mongoose')
 
+
 const UserSchema = new mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
     fullName: {
         type: String,
     },
-   
     email: {
         type: String,
     },
@@ -57,8 +57,18 @@ const UserSchema = new mongoose.Schema({
     availableBalance:{
         type: String,
     },
+    currency:{
+        type: String,
+    },
+    accountStatus:{
+        type: Boolean,
+        default:false
+    },
+    walletFeauture:{
+        type: Boolean,
+        default:false
+    }
 })
-
 
 const NotificationSchema = new mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
@@ -104,8 +114,6 @@ const NotificationSchema = new mongoose.Schema({
 
 
 })
-
-
 const TokenSchema = new mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
     email: {
@@ -145,7 +153,6 @@ const TransactionSchema = new mongoose.Schema({
         ref: "User"
     },
 })
-
 const AdminSchema = new mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
     email: {
@@ -183,7 +190,6 @@ const AdminSchema = new mongoose.Schema({
     },
 
 })
-
 const depositSchema = new mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
    
