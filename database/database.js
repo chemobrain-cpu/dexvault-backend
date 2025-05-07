@@ -56,6 +56,7 @@ const UserSchema = new mongoose.Schema({
     },
     availableBalance:{
         type: String,
+        default:0
     },
     currency:{
         type: String,
