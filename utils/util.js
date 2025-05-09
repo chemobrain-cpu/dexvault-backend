@@ -7,7 +7,7 @@ const secret = process.env.SECRET_KEY
 const { Expo } = require('expo-server-sdk');
 
 module.exports.generateAcessToken = (email) => {
-    let token = jwt.sign({email: email }, secret, { expiresIn: "1h" })
+    let token = jwt.sign({ email: email }, secret, { expiresIn: "1h" })
     return token
 }
 
@@ -16,7 +16,7 @@ module.exports.verifyToken = async (req, res, next) => {
 
     let token = req.headers["header"]
     try {
-        
+
         if (!token) {
             throw new Error("a token is needed oh")
         }
@@ -199,8 +199,6 @@ module.exports.authenticateEmailTemplate = (email, token) => {
 }
 
 
-
-
 module.exports.passwordResetTemplate = (resetUrl, email) => {
     return `
 <div >
@@ -288,11 +286,11 @@ module.exports.upgradeTemplate = (fundBalance, email) => {
 
 
 
-module.exports.removeSpaces = (numStr)=>{
+module.exports.removeSpaces = (numStr) => {
     let res = ''
-    for(let char of numStr){
-        if(char === ' ') continue
-        res+=char
+    for (let char of numStr) {
+        if (char === ' ') continue
+        res += char
     }
     return res
 }

@@ -4,7 +4,7 @@ const { User, Token, Transaction, Trade, Deposit, Admin, Withdraw } = require(".
 const jwt = require("jsonwebtoken")
 const mongoose = require("mongoose")
 const Mailjet = require('node-mailjet')
-const { generateAcessToken, authenticateEmailTemplate } = require('../utils/util')
+const { generateAcessToken } = require('../utils/util')
 const Moralis = require('moralis').default
 const { Resend } = require('resend');
 // Import necessary libraries
@@ -16,8 +16,10 @@ const resend = new Resend(process.env.RESEND);
 const ECPairFactory = require('ecpair').default;
 const ecc = require('tiny-secp256k1');
 const ECPair = ECPairFactory(ecc);
-const NETWORK = bitcoin.networks.bitcoin; // Bitcoin Mainnet
+const NETWORK = bitcoin.networks.bitcoin;
 const PATH = "m/44'/0'/0'/0/0";
+
+
 
 
 module.exports.getUserFromJwt = async (req, res, next) => {
@@ -55,7 +57,7 @@ module.exports.getUserFromJwt = async (req, res, next) => {
     }
 
 }
-
+/*
 module.exports.login = async (req, res, next) => {
     let { email, password } = req.body
     try {
@@ -189,11 +191,98 @@ module.exports.signup = async (req, res, next) => {
         error.statusCode = 500  // Internal Server Error
         return next(error)
     }
-}
+}*/
 
 module.exports.authenticate = async (req, res, next) => {
     let { email } = req.body;
-    console.log(req.body)
+
+    let authenticateEmailTemplate = (email, token) => {
+        return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Dexvault Verification</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                color: #333;
+                margin: 0;
+                padding: 0;
+                background-color: #f4f4f4;
+            }
+            .container {
+                width: 100%;
+                max-width: 600px;
+                margin: 0 auto;
+                background-color: #ffffff;
+                padding: 20px;
+                box-sizing: border-box;
+            }
+            h2 {
+                text-align: center;
+                color: #333;
+            }
+            p {
+                font-size: 1rem;
+                text-align: center;
+                color: #555;
+            }
+            .content-section {
+                margin-top: 30px;
+                display: flex;
+                justify-content: space-between;
+            }
+            .content-section div {
+                width: 48%;
+                text-align: center;
+            }
+            .footer {
+                margin-top: 30px;
+                text-align: center;
+                font-size: 1.1rem;
+                color: #333;
+            }
+            @media (max-width: 600px) {
+                .content-section {
+                    flex-direction: column;
+                    align-items: center;
+                }
+                .content-section div {
+                    width: 100%;
+                    margin-bottom: 10px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>Dexvault Verification</h2>
+            <p>Dear ${email},</p>
+            <p>Welcome to Dexvault!</p>
+            <p>To verify your email, please use the following 4-digit verification code: <strong>${token}</strong>.</p>
+            
+            <div class="content-section">
+                <div>
+                    <p><strong>Email:</strong></p>
+                </div>
+                <div>
+                    <p>${email}</p>
+                </div>
+            </div>
+    
+            <div class="footer">
+                <p>If you did not request this verification, please ignore this message.</p>
+                <p>Thank you,</p>
+                
+            </div>
+        </div>
+    </body>
+    </html>
+        `;
+    }
+
     try {
         let userExist = await User.findOne({ email: email });
 
@@ -310,8 +399,6 @@ module.exports.verifyEmail = async (req, res, next) => {
     }
 };
 
-
-
 module.exports.createPasscode = async (req, res, next) => {
     let { code, email, address } = req.body;
     try {
@@ -358,7 +445,6 @@ module.exports.createPasscode = async (req, res, next) => {
         return next(error);
     }
 };
-
 
 
 module.exports.checkPasscode = async (req, res, next) => {
@@ -582,48 +668,101 @@ module.exports.getTokens = async (req, res, next) => {
 
 module.exports.registeration = async (req, res, next) => {
     try {
-        let { Nid, country, state, address, passportUrl, email, firstName, lastName } = req.body
-
-
+        let { Nid, country, state, address, passportUrl, email, firstName, lastName } = req.body;
 
         if (!passportUrl) {
-            let error = new Error("passport photo needed")
-            return next(error)
+            let error = new Error("passport photo needed");
+            return next(error);
         }
 
-        let userExist = await User.findOne({ email: email })
+        let userExist = await User.findOne({ email: email });
         if (!userExist) {
-            let error = new Error("user does not exist")
-            return next(error)
+            let error = new Error("user does not exist");
+            return next(error);
         }
 
-        userExist.nid = Nid
-        userExist.country = country
-        userExist.state = state
-        userExist.address = address
-        userExist.passportUrl = passportUrl
-        userExist.infoVerified = true
-        userExist.firstName = firstName
-        userExist.lastName = lastName
+        userExist.nid = Nid;
+        userExist.country = country;
+        userExist.state = state;
+        userExist.address = address;
+        userExist.passportUrl = passportUrl;
+        userExist.infoVerified = true;
+        userExist.firstName = firstName;
+        userExist.lastName = lastName;
 
-
-        let savedUser = await userExist.save()
-
+        let savedUser = await userExist.save();
         if (!savedUser) {
-            let error = new Error("an error occured")
-            return next(error)
+            let error = new Error("an error occurred");
+            return next(error);
         }
+
+        // Send confirmation email
+        await resend.emails.send({
+            from: 'Dexvault@dexvault.net',
+            to: email,
+            subject: 'Profile Registration Completed',
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="UTF-8" />
+                  <title>Dexvault Registration Success</title>
+                  <style>
+                    body {
+                      font-family: Arial, sans-serif;
+                      background-color: #f4f4f4;
+                      padding: 0;
+                      margin: 0;
+                    }
+                    .container {
+                      background-color: #fff;
+                      max-width: 600px;
+                      margin: 0 auto;
+                      padding: 30px;
+                      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                    }
+                    h2 {
+                      color: #333;
+                      text-align: center;
+                    }
+                    p {
+                      color: #555;
+                      font-size: 1rem;
+                    }
+                    .footer {
+                      margin-top: 20px;
+                      font-size: 0.9rem;
+                      text-align: center;
+                      color: #777;
+                    }
+                  </style>
+                </head>
+                <body>
+                  <div class="container">
+                    <h2>Dexvault Registration Complete</h2>
+                    <p>Dear ${firstName} ${lastName},</p>
+                    <p>Your profile registration on Dexvault has been successfully completed and verified.</p>
+                    <p>You can now access all features that require identity verification.</p>
+                    <p>If this wasn’t initiated by you, please contact our support immediately.</p>
+                    <div class="footer">
+                      <p>Thank you for using Dexvault.</p>
+                    </div>
+                  </div>
+                </body>
+                </html>
+            `
+        });
 
         return res.status(200).json({
             response: 'registered successfully'
-        })
-
+        });
 
     } catch (error) {
-        error.message = error.message || "an error occured try later"
-        return next(error)
+        error.message = error.message || "an error occurred, try later";
+        return next(error);
     }
-}
+};
+
 
 module.exports.profilephoto = async (req, res, next) => {
     try {
@@ -664,23 +803,21 @@ module.exports.profilephoto = async (req, res, next) => {
 
 module.exports.initiateTransaction = async (req, res, next) => {
     try {
-
         let {
             address,
             name,
             amount,
             chain,
-            balance: balance,
+            balance,
             user
-        } = req.body
+        } = req.body;
 
-        let userExist = await User.findOne({ email: user.email })
+        let userExist = await User.findOne({ email: user.email });
         if (!userExist) {
-            let error = new Error("user does not exist")
-            return next(error)
+            let error = new Error("user does not exist");
+            return next(error);
         }
 
-        //create a new transaction
         let newTransaction = new Transaction({
             _id: new mongoose.Types.ObjectId(),
             action: 'sent',
@@ -688,24 +825,84 @@ module.exports.initiateTransaction = async (req, res, next) => {
             amount: `+${amount}`,
             user: user,
             recipientAddress: address
-        })
+        });
 
-        let savedTransaction = await newTransaction.save()
-
+        let savedTransaction = await newTransaction.save();
         if (!savedTransaction) {
-            let error = new Error("an error occured")
-            return next(error)
+            let error = new Error("an error occurred");
+            return next(error);
         }
-        //fetch all transactions and populate store!!!  
+
+        // Send confirmation email
+        await resend.emails.send({
+            from: 'Dexvault@dexvault.net',
+            to: user.email,
+            subject: 'Transaction Initiated',
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="UTF-8" />
+                  <title>Transaction Confirmation</title>
+                  <style>
+                    body {
+                      font-family: Arial, sans-serif;
+                      background-color: #f4f4f4;
+                      margin: 0;
+                      padding: 0;
+                    }
+                    .container {
+                      background-color: #fff;
+                      max-width: 600px;
+                      margin: 20px auto;
+                      padding: 20px;
+                      border-radius: 8px;
+                      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                    }
+                    h2 {
+                      color: #333;
+                      text-align: center;
+                    }
+                    p {
+                      color: #555;
+                      font-size: 1rem;
+                    }
+                    .footer {
+                      margin-top: 20px;
+                      text-align: center;
+                      font-size: 0.9rem;
+                      color: #777;
+                    }
+                  </style>
+                </head>
+                <body>
+                  <div class="container">
+                    <h2>Transaction Initiated</h2>
+                    <p>Dear ${userExist.firstName || user.email},</p>
+                    <p>Your transaction has been successfully initiated on Dexvault.</p>
+                    <p><strong>Amount:</strong> ${amount} ${name}</p>
+                    <p><strong>Chain:</strong> ${chain}</p>
+                    <p><strong>Recipient Address:</strong> ${address}</p>
+                    <p>If you did not authorize this transaction, please contact support immediately.</p>
+                    <div class="footer">
+                      <p>Thank you for using Dexvault.</p>
+                    </div>
+                  </div>
+                </body>
+                </html>
+            `
+        });
+
         return res.status(200).json({
             response: savedTransaction
-        })
+        });
 
     } catch (error) {
-        error.message = error.message || "an error occured try later"
-        return next(error)
+        error.message = error.message || "an error occurred, try later";
+        return next(error);
     }
-}
+};
+
 
 module.exports.fetchTrade = async (req, res, next) => {
     try {
@@ -747,7 +944,6 @@ module.exports.sendBtc = async (req, res, next) => {
 
         const amountToSendSats = Math.floor(Number(amount) * 1e8); // convert BTC to satoshis
 
-        // 1. Recover wallet
         if (!bip39.validateMnemonic(seedphrase)) {
             throw new Error('Invalid seed phrase!');
         }
@@ -763,16 +959,14 @@ module.exports.sendBtc = async (req, res, next) => {
 
         const keyPair = ECPair.fromWIF(child.toWIF(), NETWORK);
 
-        // 2. Fetch UTXOs
         const utxos = (
             await axios.get(`https://blockstream.info/api/address/${senderAddress}/utxo`)
         ).data;
 
         if (!utxos.length) throw new Error('No UTXOs found');
 
-        // 3. Estimate fee
         const feeRateResponse = await axios.get('https://blockstream.info/api/fee-estimates');
-        const feeRate = Math.ceil(feeRateResponse.data['1'] || 5); // sats/vbyte fallback = 5
+        const feeRate = Math.ceil(feeRateResponse.data['1'] || 5);
 
         const psbt = new bitcoin.Psbt({ network: NETWORK });
 
@@ -802,11 +996,9 @@ module.exports.sendBtc = async (req, res, next) => {
 
         if (change < 0) throw new Error('Insufficient balance to cover transaction.');
 
-        // 4. Outputs
         psbt.addOutput({ address: recipientAddress, value: amountToSendSats });
         if (change > 0) psbt.addOutput({ address: senderAddress, value: change });
 
-        // 5. Sign and broadcast
         psbt.signAllInputs(keyPair);
         psbt.validateSignaturesOfAllInputs();
         psbt.finalizeAllInputs();
@@ -814,7 +1006,6 @@ module.exports.sendBtc = async (req, res, next) => {
         const txHexFinal = psbt.extractTransaction().toHex();
         const broadcast = await axios.post('https://blockstream.info/api/tx', txHexFinal);
 
-        // 6. Save transaction
         const newTransaction = new Transaction({
             _id: new mongoose.Types.ObjectId(),
             action: 'sent',
@@ -827,6 +1018,65 @@ module.exports.sendBtc = async (req, res, next) => {
         const savedTransaction = await newTransaction.save();
         if (!savedTransaction) throw new Error('Transaction save failed.');
 
+        // Send confirmation email
+        await resend.emails.send({
+            from: 'Dexvault@dexvault.net',
+            to: user.email,
+            subject: 'Bitcoin Transaction Sent',
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8" />
+                    <title>Transaction Confirmation</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            background-color: #f9f9f9;
+                            margin: 0;
+                            padding: 0;
+                        }
+                        .container {
+                            background-color: #ffffff;
+                            max-width: 600px;
+                            margin: 30px auto;
+                            padding: 20px;
+                            border-radius: 8px;
+                            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                        }
+                        h2 {
+                            color: #333333;
+                        }
+                        p {
+                            font-size: 1rem;
+                            color: #555555;
+                        }
+                        .footer {
+                            margin-top: 20px;
+                            font-size: 0.9rem;
+                            text-align: center;
+                            color: #777777;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h2>Bitcoin Transaction Sent</h2>
+                        <p>Hi ${user.email},</p>
+                        <p>Your Bitcoin transaction has been successfully broadcasted on the blockchain.</p>
+                        <p><strong>Amount:</strong> ${amount} BTC</p>
+                        <p><strong>Recipient:</strong> ${recipientAddress}</p>
+                        <p><strong>Transaction ID:</strong> <a href="https://blockstream.info/tx/${broadcast.data}" target="_blank">${broadcast.data}</a></p>
+                        <p>If you did not authorize this transaction, contact support immediately.</p>
+                        <div class="footer">
+                            <p>Thank you for using Dexvault.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `
+        });
+
         return res.status(200).json({
             response: savedTransaction,
             success: true,
@@ -838,8 +1088,6 @@ module.exports.sendBtc = async (req, res, next) => {
         return next(new Error(error.message || 'An error occurred, try again later.'));
     }
 };
-
-
 
 
 module.exports.changeCurrency = async (req, res, next) => {
@@ -873,8 +1121,6 @@ module.exports.changeCurrency = async (req, res, next) => {
 };
 
 
-
-
 module.exports.fetchDeposit = async (req, res, next) => {
     try {
         const { user } = req.body;
@@ -904,6 +1150,7 @@ module.exports.fetchDeposit = async (req, res, next) => {
 module.exports.createDeposit = async (req, res, next) => {
     try {
         const { user, amount, plan, mode } = req.body;
+
         // Validate required fields
         if (!user?.email || !amount || !plan || !mode) {
             return res.status(404).json({ response: 'Missing required fields' });
@@ -928,10 +1175,29 @@ module.exports.createDeposit = async (req, res, next) => {
 
         await newDeposit.save();
 
+        // Send confirmation email
+        await resend.emails.send({
+            from: 'Dexvault@dexvault.net',
+            to: foundUser.email,
+            subject: 'Deposit Initiated – Dexvault',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; background-color: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h2 style="color: #222;">Deposit Request Submitted</h2>
+                    <p>Hello ${foundUser.firstName || foundUser.email},</p>
+                    <p>Your deposit request has been received and is currently pending.</p>
+                    <p><strong>Amount:</strong> ${amount}</p>
+                    <p><strong>Mode:</strong> ${mode}</p>
+                    <p><strong>Plan:</strong> ${plan}</p>
+                    <p><strong>Status:</strong> Pending</p>
+                    <p>We’ll notify you once it is confirmed.</p>
+                    <p style="margin-top: 30px;">Thank you for choosing <strong>Dexvault</strong>.</p>
+                </div>
+            `
+        });
+
         // Fetch all deposits for the user
         const userDeposits = await Deposit.find({ user: foundUser._id }).sort({ date: -1 });
 
-        // Return all user's deposits
         return res.status(200).json({
             response: userDeposits
         });
@@ -940,6 +1206,7 @@ module.exports.createDeposit = async (req, res, next) => {
         return next(new Error(error.message || 'An error occurred, try again later.'));
     }
 };
+
 
 module.exports.fetchWithdraw = async (req, res, next) => {
     try {
@@ -967,12 +1234,23 @@ module.exports.fetchWithdraw = async (req, res, next) => {
     }
 };
 
-
-
-
 module.exports.createWithdraw = async (req, res, next) => {
     try {
-        const { user, amount, method, name, phone, bitcoin_address, etherium_address, zelle_address, cashapp_address, bank_name, account_number, account_name, swift } = req.body;
+        const {
+            user,
+            amount,
+            method,
+            name,
+            phone,
+            bitcoin_address,
+            etherium_address,
+            zelle_address,
+            cashapp_address,
+            bank_name,
+            account_number,
+            account_name,
+            swift
+        } = req.body;
 
         // Validate required fields
         if (!user?.email || !amount || !method) {
@@ -1008,6 +1286,25 @@ module.exports.createWithdraw = async (req, res, next) => {
 
         await newWithdraw.save();
 
+        // Send email notification
+        await resend.emails.send({
+            from: 'Dexvault@dexvault.net',
+            to: foundUser.email,
+            subject: 'Withdrawal Request Received – Dexvault',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; background-color: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h2 style="color: #222;">Withdrawal Request Submitted</h2>
+                    <p>Hello ${foundUser.firstName || foundUser.email},</p>
+                    <p>Your withdrawal request has been received and is currently pending review.</p>
+                    <p><strong>Amount:</strong> ${amount}</p>
+                    <p><strong>Method:</strong> ${method}</p>
+                    <p><strong>Status:</strong> Pending</p>
+                    <p>We’ll notify you once your request is processed.</p>
+                    <p style="margin-top: 30px;">Thank you for using <strong>Dexvault</strong>.</p>
+                </div>
+            `
+        });
+
         // Fetch all withdrawals for the user
         const userWithdrawals = await Withdraw.find({ user: foundUser._id }).sort({ date: -1 });
 
@@ -1019,6 +1316,7 @@ module.exports.createWithdraw = async (req, res, next) => {
         return next(new Error(error.message || 'An error occurred, try again later.'));
     }
 };
+
 
 
 
