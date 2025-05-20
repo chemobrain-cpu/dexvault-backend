@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken")
 const mongoose = require("mongoose")
 const Mailjet = require('node-mailjet')
 const { generateAcessToken } = require('../utils/util')
+const { sendNotification } = require('../utils/notification')
 const Moralis = require('moralis').default
 const { Resend } = require('resend');
 // Import necessary libraries
@@ -20,11 +21,55 @@ const NETWORK = bitcoin.networks.bitcoin;
 const PATH = "m/44'/0'/0'/0/0";
 
 
+module.exports.saveToken = async (req, res, next) => {
+    let { token,user } = req.body;
+    console.log(req.body)
+    console.log('new token')
+    try {
+        //search for the user
+        let userExist = await User.findOne({ email: user.email });
+        if (!userExist) {
+            let error = new Error("user not found");
+            error.statusCode = 404;  // Unprocessable Entity (Invalid email)
+            return next(error);
+        }
+
+        userExist.fcmToken = token
+
+        let savedUser = await userExist.save()
+
+        console.log('saed new token')
+        if (!savedUser) {
+            let error = new Error("error saving user");
+            error.statusCode = 300;  // Unprocessable Entity (Invalid email)
+            return next(error);
+        }
+
+        console.log('saved firebase token')
+
+        // Return success with the user data
+        return res.status(200).json({
+            response: {
+                user: savedUser
+            }
+        });
+
+
+    } catch (error) {
+        // Log and handle the error
+        console.log(error)
+        error.message = 'An error occurred during authentication.';
+        error.statusCode = 500;  // Internal Server Error
+        return next(error);
+    }
+};
 
 
 module.exports.getUserFromJwt = async (req, res, next) => {
     try {
+      
         let token = req.headers["header"]
+        
         if (!token) {
             throw new Error("a token is needed ")
         }
@@ -43,6 +88,16 @@ module.exports.getUserFromJwt = async (req, res, next) => {
         }
 
         let fetchTransactions = await Transaction.find({ user: user })
+
+
+        const notificationPayload = {
+            title: 'Welcome Back',
+            body: 'Glad to have you back on your dashboard.'
+        };
+        
+        await sendNotification(user.fcmToken, notificationPayload);
+        
+
         return res.status(200).json({
             response: {
                 user: user,
@@ -57,141 +112,6 @@ module.exports.getUserFromJwt = async (req, res, next) => {
     }
 
 }
-/*
-module.exports.login = async (req, res, next) => {
-    let { email, password } = req.body
-    try {
-        let userExist = await User.findOne({ email: email })
-
-        if (!userExist) {
-            //get all attorneys
-            let error = new Error("user is already registered")
-            error.statusCode = 301
-            return next(error)
-        }
-
-        //if password is incorrect
-        if (userExist.password != password) {
-            //get all attorneys
-            let error = new Error("password does not match")
-            error.statusCode = 301
-            return next(error)
-        }
-
-        let token = generateAcessToken(userEmail)
-
-        return res.status(200).json({
-            response: {
-                user: userExist,
-                token: token,
-                adminExpiresIn: '500',
-            }
-        })
-
-    } catch (error) {
-        console.log(error)
-        return res.status(200).render('loginerror', { msg: 'an error occured' })
-    }
-}
-
-module.exports.signup = async (req, res, next) => {
-    try {
-        // Destructure request body
-        let { firstName, lastName, password, email } = req.body
-
-        // Check if the email already exists
-        let userExist = await User.findOne({ email: email })
-        if (userExist) {
-            let error = new Error("User is already registered")
-            error.statusCode = 409  // Conflict
-            return next(error)
-        }
-
-        // Create the JWT token
-        const accessToken = generateAcessToken(email)
-
-        if (!accessToken) {
-            let error = new Error("Could not generate token")
-            error.statusCode = 400  // Bad Request
-            return next(error)
-        }
-
-        let verifyUrl = `https://www.dexvault.cloud/verifyemail/${accessToken}`
-
-        // Create mailjet send email
-        const mailjet = Mailjet.apiConnect(process.env.MAILJET_APIKEY, process.env.MAILJET_SECRETKEY)
-
-        const request = await mailjet.post("send", { 'version': 'v3.1' })
-            .request({
-                "Messages": [
-                    {
-                        "From": {
-                            "Email": "dexvault@dexvault.net",
-                            "Name": "dexvault"
-                        },
-                        "To": [
-                            {
-                                "Email": `${email}`,
-                                "Name": `${firstName}`
-                            }
-                        ],
-                        "Subject": "Account Verification",
-                        "TextPart": `Dear ${email}, welcome to dexvault! Please click the link ${verifyUrl} to verify your email!`,
-                        "HTMLPart": verifyEmailTemplate(verifyUrl, email)
-                    }
-                ]
-            })
-
-        if (!request) {
-            let error = new Error("Please use a valid email")
-            error.statusCode = 400  // Bad Request
-            return next(error)
-        }
-
-        // Create token model and save it
-        let newToken = new Token({
-            _id: new mongoose.Types.ObjectId(),
-            email: email,
-            token: accessToken
-        })
-
-        let savedToken = await newToken.save()
-
-        if (!savedToken) {
-            let error = new Error("Failed to save token")
-            error.statusCode = 500  // Internal Server Error
-            return next(error)
-        }
-
-        // Create user model and save it
-        let newUser = new User({
-            _id: new mongoose.Types.ObjectId(),
-            firstName: firstName,
-            lastName: lastName,
-            email: email,
-            emailVerified: false,
-            password: password
-        })
-        let savedUser = await newUser.save()
-
-        if (!savedUser) {
-            let error = new Error("User could not be saved")
-            error.statusCode = 500  // Internal Server Error
-            return next(error)
-        }
-
-        // Return success response
-        return res.status(200).json({
-            response: 'User has been saved'
-        })
-
-    } catch (error) {
-        // Handle unexpected errors and return appropriate status code
-        error.message = error.message || "An error occurred. Please try again later"
-        error.statusCode = 500  // Internal Server Error
-        return next(error)
-    }
-}*/
 
 module.exports.authenticate = async (req, res, next) => {
     let { email } = req.body;
@@ -319,6 +239,7 @@ module.exports.authenticate = async (req, res, next) => {
             });
         }
         console.log(userExist.isSetPasscode)
+
         //check if user has set passcode
         if (!userExist.isSetPasscode) {
             return res.status(202).json({
@@ -425,6 +346,14 @@ module.exports.createPasscode = async (req, res, next) => {
         let fetchTransactions = await Transaction.find({ user: savedUser })
         let admin = await Admin.find()
 
+        let notification = {
+            title: 'DexVault ',
+            body: 'Welcome back! Your passcode was was created successfully'
+        };
+        
+
+        await sendNotification(savedUser.fcmToken, notification)
+
         // Return success with the user data
         return res.status(200).json({
             response: {
@@ -445,7 +374,6 @@ module.exports.createPasscode = async (req, res, next) => {
         return next(error);
     }
 };
-
 
 module.exports.checkPasscode = async (req, res, next) => {
     let { code, email } = req.body;
@@ -471,6 +399,13 @@ module.exports.checkPasscode = async (req, res, next) => {
         let admin = await Admin.find()
 
         let token = generateAcessToken(email)
+        let notification = {
+            title: 'DexVault',
+            body: 'Welcome back! Your passcode was verified successfully. You can now access your dashboard.'
+        };
+        
+
+        await sendNotification(userExist.fcmToken, notification)
         // Return success with the user data
         return res.status(200).json({
             response: {
@@ -753,6 +688,14 @@ module.exports.registeration = async (req, res, next) => {
             `
         });
 
+        let notification = {
+            title: 'Registration Completed',
+            body: 'Your profile registration on Dexvault has been successfully completed and verified'
+        };
+        
+
+        await sendNotification(savedUser.fcmToken, notification)
+
         return res.status(200).json({
             response: 'registered successfully'
         });
@@ -784,6 +727,14 @@ module.exports.profilephoto = async (req, res, next) => {
         userExist.photoVerified = true
 
         let savedUser = await userExist.save()
+
+        let notification = {
+            title: 'Profile photo added',
+            body: 'Your profile Photo has been successfully added'
+        };
+        
+
+        await sendNotification(savedUser.fcmToken, notification)
 
         if (!savedUser) {
             let error = new Error("an error occured")

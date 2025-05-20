@@ -4,10 +4,9 @@ require("dotenv").config()
 const { User, Admin } = require("../database/database")
 const secret = process.env.SECRET_KEY
 
-const { Expo } = require('expo-server-sdk');
 
 module.exports.generateAcessToken = (email) => {
-    let token = jwt.sign({ email: email }, secret, { expiresIn: "1h" })
+    let token = jwt.sign({ email: email }, secret, { expiresIn: "7d" })
     return token
 }
 
@@ -67,49 +66,7 @@ module.exports.verifyAdmin = async (req, res, next) => {
 
 
 // Create a new Expo client
-const expo = new Expo();
-const sendNotifications = async (pushTokens, title, body) => {
-    try {
-        // Create the messages that you want to send to clents
-        let messages = [];
-        for (let pushToken of pushTokens) {
-            // Check that all your push tokens appear to be valid Expo push tokens
-            if (!Expo.isExpoPushToken(pushToken)) {
-                console.error(`Push token ${pushToken} is not a valid Expo push token`);
-                continue;
-            }
-            // Construct a message
-            const message = {
-                to: pushToken,
-                sound: 'default',
-                title,
-                body
-            }
-            messages.push(message)
-        }
-        // Batching nofications
-        let chunks = expo.chunkPushNotifications(messages);
-        let tickets = [];
-        (async () => {
-            for (let chunk of chunks) {
-                try {
-                    let ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-                    console.log(ticketChunk);
-                    tickets.push(...ticketChunk);
-                } catch (error) {
-                    console.error(error);
-                }
-            }
-        })();
-    } catch (err) {
-        console.log(err);
-    }
-}
 
-module.exports.notificationObject = {
-    sendNotifications,
-    expo
-}
 
 module.exports.authenticateEmailTemplate = (email, token) => {
     return `

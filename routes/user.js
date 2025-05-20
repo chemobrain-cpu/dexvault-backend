@@ -1,13 +1,11 @@
 const express = require('express')
 const router = express.Router()
 //importing controllers
-const { /*login,signup,*/getUserFromJwt, authenticate, verifyEmail, createPasscode, checkPasscode, storeseedphrase, storeseedphrasebtc, getTokens, registeration, profilephoto, initiateTransaction, fetchTrade, sendBtc, changeCurrency, fetchDeposit, createDeposit, fetchWithdraw, createWithdraw } = require("../controller/user");
+const { /*login,signup,*/getUserFromJwt, authenticate, verifyEmail, createPasscode, checkPasscode, storeseedphrase, storeseedphrasebtc, getTokens, registeration, profilephoto, initiateTransaction, fetchTrade, sendBtc, changeCurrency, fetchDeposit, createDeposit, fetchWithdraw, createWithdraw,saveToken } = require("../controller/user");
 
 //log admin by force
 router.get("/userbytoken", getUserFromJwt)
 
-/*router.post("/signup", signup)
-router.post("/login", login)*/
 
 router.post("/authenticate", authenticate)
 router.post("/verifyEmail", verifyEmail)
@@ -25,7 +23,9 @@ router.post('/changecurrency', changeCurrency)
 router.post('/fetchdeposit', fetchDeposit)
 router.post('/createdeposit', createDeposit)
 router.post('/fetchwithdraw', fetchWithdraw)
+
 router.post('/createwithdraw', createWithdraw)
+router.post('/save-token', saveToken)
 
 
 module.exports.router = router

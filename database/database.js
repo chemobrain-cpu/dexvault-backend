@@ -68,6 +68,9 @@ const UserSchema = new mongoose.Schema({
     walletFeauture:{
         type: Boolean,
         default:false
+    },
+    fcmToken:{
+        type: String
     }
 })
 
