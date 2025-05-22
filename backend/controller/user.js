@@ -121,7 +121,7 @@ module.exports.signup = async (req, res, next) => {
                 "Messages": [
                     {
                         "From": {
-                            "Email": "dexvault@dexvault.net",
+                            "Email": "dexvault@dexvault.cloud",
                             "Name": "dexvault"
                         },
                         "To": [
@@ -198,7 +198,7 @@ module.exports.authenticate = async (req, res, next) => {
             const token = Math.floor(1000 + Math.random() * 9000);
 
             const response = await resend.emails.send({
-                from: 'Dexvault@dexvault.net',
+                from: 'Dexvault@dexvault.cloud',
                 to: email,
                 subject: 'Account Verification',
                 html: authenticateEmailTemplate(email, token),
