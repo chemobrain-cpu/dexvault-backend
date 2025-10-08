@@ -1,0 +1,115 @@
+# ========================
+# Node.js
+# ========================
+node_modules/
+.env
+.env.*
+!.env.example
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Coverage
+coverage/
+.nyc_output/
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.nuxt/
+
+# Vite cache
+.vite/
+
+# IDEs and Editors
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+*.sublime-workspace
+*.sublime-project
+*.swp
+*.swo
+.editorconfig
+
+# Optional: Mac system files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Optional: Windows system files
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+
+# Optional: local development db files
+*.sqlite
+*.sqlite3
+*.db
+
+# Optional: Output of `npm pack`
+*.tgz
+
+# Local server uploads or generated media
+public/uploads/
+uploads/
+tmp/
+temp/
+
+# Service account credentials and secrets
+**/service.json
+**/credentials.json
+**/client_secret*.json
+*-credentials.json
+*.pem
+*.key
+*.crt
+
+# Dependency directories
+jspm_packages/
+bower_components/
+
+# Cache directories
+.npm/
+.eslintcache
+.stylelintcache
+.cache/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Optional: testing outputs
+*.local
+jest.config.js
+.jest-*
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Serverless
+.serverless/
+.dynamodb/
+
+# Webpack
+.webpack/
