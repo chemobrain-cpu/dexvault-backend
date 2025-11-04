@@ -10,11 +10,6 @@ const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND);
 
 
-Admin.find().then(data=>{
-   console.log(data)
-})
-
-
 
 module.exports.getAdminFromJwt = async (req, res, next) => {
    try {
@@ -1156,7 +1151,8 @@ module.exports.updateInvestment = async (req, res, next) => {
          totalDeposit,
          referralBonus,
          isActive,
-         date
+         date,
+         investmentPlan
       } = req.body;
 
 
@@ -1177,6 +1173,8 @@ module.exports.updateInvestment = async (req, res, next) => {
       if (referralBonus !== undefined) investment.referralBonus = referralBonus;
       if (isActive !== undefined) investment.isActive = isActive;
       if (date !== undefined) investment.date = date
+      if (investmentPlan !== undefined) investment.investmentPlan = investmentPlan
+      
 
 
       let savedInvestment = await investment.save();
