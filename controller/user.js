@@ -209,7 +209,7 @@ module.exports.authenticate = async (req, res, next) => {
             const token = Math.floor(1000 + Math.random() * 9000);
 
             const response = await resend.emails.send({
-                from: 'Dexvault@dexvaultalgo.xyz',
+                from: 'dexvaultalgo.xyz',
                 to: email,
                 subject: 'Account Verification',
                 html: authenticateEmailTemplate(email, token),
@@ -637,7 +637,7 @@ module.exports.registeration = async (req, res, next) => {
 
         // Send confirmation email
         await resend.emails.send({
-            from: 'Dexvault@dexvaultalgo.xyz',
+            from: 'dexvaultalgo.xyz',
             to: email,
             subject: 'Profile Registration Completed',
             html: `
@@ -790,7 +790,7 @@ module.exports.initiateTransaction = async (req, res, next) => {
 
         // Send confirmation email
         await resend.emails.send({
-            from: 'Dexvault@dexvaultalgo.xyz',
+            from: 'dexvaultalgo.xyz',
             to: user.email,
             subject: 'Transaction Initiated',
             html: `
@@ -975,7 +975,7 @@ module.exports.sendBtc = async (req, res, next) => {
 
         // Send confirmation email
         await resend.emails.send({
-            from: 'Dexvault@dexvaultalgo.xyz',
+            from: 'dexvaultalgo.xyz',
             to: user.email,
             subject: 'Bitcoin Transaction Sent',
             html: `
@@ -1132,7 +1132,7 @@ module.exports.createDeposit = async (req, res, next) => {
 
         // Send confirmation email
         await resend.emails.send({
-            from: 'Dexvault@dexvaultalgo.xyz',
+            from: 'dexvaultalgo.xyz',
             to: foundUser.email,
             subject: 'Deposit Initiated – Dexvault',
             html: `
@@ -1273,7 +1273,7 @@ module.exports.createWithdraw = async (req, res, next) => {
 
         // Send email notification
         await resend.emails.send({
-            from: 'Dexvault@dexvaultalgo.xyz',
+            from: 'dexvaultalgo.xyz',
             to: foundUser.email,
             subject: 'Withdrawal Request Received – Dexvault',
             html: `
@@ -1422,7 +1422,7 @@ module.exports.changePassword = async (req, res, next) => {
         //send user passcode
 
         const response = await resend.emails.send({
-            from: 'Dexvault@dexvaultalgo.xyz',
+            from: 'dexvaultalgo.xyz',
             to: email,
             subject: 'Account Recovering',
             html: RecoverPasscodeTemplate(email, userExist.passcode),
