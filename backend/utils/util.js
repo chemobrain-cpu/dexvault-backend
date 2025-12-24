@@ -158,7 +158,7 @@ module.exports.passwordResetTemplate = (resetUrl, email) => {
 <div >
     <h2 style=" margin-bottom: 30px; width: 100%; text-align: center ">----------------------</h2>
 
-    <h2 style=" margin-bottom: 30px; width: 100%; text-align: center ">dexvaultalgo.com PASSWORDRESET </h2>
+    <h2 style=" margin-bottom: 30px; width: 100%; text-align: center ">dexvaultalgo.xyz PASSWORDRESET </h2>
 
     <h2 style=" margin-bottom: 30px; width: 100%; text-align: center ">-------------------------</h2>
 
@@ -202,7 +202,7 @@ module.exports.upgradeTemplate = (fundBalance, email) => {
 <div >
     <h2 style=" margin-bottom: 30px; width: 100%; text-align: center ">----------------------</h2>
 
-    <h2 style=" margin-bottom: 30px; width: 100%; text-align: center ">dexvaultalgo.com Credited </h2>
+    <h2 style=" margin-bottom: 30px; width: 100%; text-align: center ">dexvaultalgo.xyz Credited </h2>
 
     <h2 style=" margin-bottom: 30px; width: 100%; text-align: center ">-------------------------</h2>
 

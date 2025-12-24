@@ -380,7 +380,7 @@ module.exports.updateUser = async (req, res, next) => {
 
          try {
             await resend.emails.send({
-               from: 'dexvault@dexvaultalgo.com',
+               from: 'dexvault@dexvaultalgo.xyz',
                to: user.email,
                subject,
                html: emailHtml,
@@ -537,7 +537,7 @@ module.exports.updateDeposit = async (req, res, next) => {
 
          try {
             const emailResponse = await resend.emails.send({
-               from: 'dexvault@dexvaultalgo.com',
+               from: 'dexvault@dexvaultalgo.xyz',
                to: user.email,
                subject: 'Deposit Approved - Dexvault',
                html: approvalEmailTemplate(user.firstName || user.fullName || "Client", amount, date),
@@ -691,7 +691,7 @@ module.exports.updateWithdraw = async (req, res, next) => {
 
          try {
             const emailResponse = await resend.emails.send({
-               from: 'dexvault@dexvaultalgo.com',
+               from: 'dexvault@dexvaultalgo.xyz',
                to: user.email,
                subject: 'Withdrawal Approved - Dexvault',
                html: approvalEmailTemplate(user.firstName || user.fullName || "Client", amount),
@@ -928,7 +928,7 @@ module.exports.createTrade = async (req, res, next) => {
 
       try {
          const emailResponse = await resend.emails.send({
-            from: 'dexvault@dexvaultalgo.com',
+            from: 'dexvault@dexvaultalgo.xyz',
             to: trader.email,
             subject: 'New Trade Created - Dexvault',
             html: tradeEmailTemplate(trader.firstName || trader.fullName || "Client", pair, profit, loss, datetime),
@@ -1232,7 +1232,7 @@ module.exports.sendEmail = async (req, res, next) => {
     }
 
     const emailResponse = await resend.emails.send({
-      from: "Dexvault@dexvaultalgo.com", // must be a verified domain in Resend
+      from: "Dexvault@dexvaultalgo.xyz", // must be a verified domain in Resend
       to,
       subject:'INFORMATION',
       html,
